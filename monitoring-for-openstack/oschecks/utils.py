@@ -147,6 +147,8 @@ class Nova(object):
                         options, 'os_tenant_id', None
                     )
                 ),
+                user_domain_name='default',
+                project_domain_name='default',
                 auth_token=auth_token,
                 auth_url=options.os_auth_url,
                 region_name=options.os_region_name,
