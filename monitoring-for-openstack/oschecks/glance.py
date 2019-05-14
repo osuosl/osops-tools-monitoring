@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # Openstack Monitoring script for Sensu / Nagios
 #
@@ -18,6 +19,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+
+import StringIO
+
 from oschecks import utils
 
 
@@ -36,14 +40,11 @@ def _check_glance_api():
             utils.critical(str(ex))
 
     elapsed, images = utils.timeit(images_list)
-    if not images:
-        utils.critical("Unable to contact Glance API.")
-
-    if elapsed > options.critical:
+    if images and elapsed > options.critical:
         utils.critical("Get images took more than %d seconds, "
                        "it's too long.|response_time=%d" %
                        (options.critical, elapsed))
-    elif elapsed > options.warning:
+    elif images and elapsed > options.warning:
         utils.warning("Get images took more than %d seconds, "
                       "it's too long.|response_time=%d" %
                       (options.warning, elapsed))
@@ -105,6 +106,18 @@ def check_glance_image_exists():
     utils.safe_run(_check_glance_image_exists)
 
 
+def _upload_image(client, name):
+    data = StringIO.StringIO("X" * 1024 * 1024)
+    img = client.images.create(name=name,
+                                disk_format='raw',
+                                container_format='bare')
+    try:
+        client.images.upload(img.id, data)
+    except Exception:
+        client.images.delete(img.id)
+        raise
+    return img.id
+
 def _check_glance_upload():
     glance = utils.Glance()
     glance.add_argument('--monitoring-image', dest='image_name', type=str,
@@ -112,16 +125,15 @@ def _check_glance_upload():
                         help='Name of the monitoring image')
     options, args, client = glance.setup()
 
-    data_raw = "X" * 1024 * 1024
-    elapsed, res = utils.timeit(client.images.create,
-                                data=data_raw,
-                                disk_format='raw',
-                                container_format='bare',
+    elapsed, iid = utils.timeit(_upload_image,
+                                client=client,
                                 name=options.image_name)
-    if not res or not res.id or res.status != 'active':
-        utils.critical("Unable to upload image in Glance")
-
-    res.delete()
+    try:
+        res = client.images.get(iid)
+        if res.status != 'active':
+            utils.critical("Unable to upload image in Glance")
+    finally:
+        client.images.delete(res.id)
 
     if elapsed > 20:
         utils.warning("Upload image in 20 seconds, it's too long")

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # Openstack Monitoring script for Sensu / Nagios
 #
@@ -52,13 +53,22 @@ def ok(msg):
 
 
 def check_process_name(name, p):
-    if p.name == name:
+    try:
+        len(p.cmdline)
+    except TypeError:
+        pname = p.name()
+        pcmdline = p.cmdline()
+    else:
+        pname = p.name
+        pcmdline = p.cmdline
+
+    if pname == name:
         return True
     # name can be truncated and a script so check also if it can be an
     # argument to an interpreter
-    if len(p.cmdline) > 0 and os.path.basename(p.cmdline[0]) == name:
+    if len(pcmdline) > 0 and os.path.basename(pcmdline[0]) == name:
         return True
-    if len(p.cmdline) > 1 and os.path.basename(p.cmdline[1]) == name:
+    if len(pcmdline) > 1 and os.path.basename(pcmdline[1]) == name:
         return True
     return False
 
@@ -70,13 +80,14 @@ def check_process_exists_and_amqp_connected(name):
         critical("%s is not running" % name)
     for p in processes:
         try:
-            connections = p.get_connections(kind='inet')
+            conn_func = getattr(p, 'get_connections', p.connections)
+            connections = conn_func(kind='inet')
         except psutil.NoSuchProcess:
             continue
         found_amqp = (
             len(list(itertools.takewhile(lambda c:
-                len(c.remote_address) <= 1 or
-                c.remote_address[1] != AMQP_PORT,
+                len(getattr(c, 'remote_address', c.raddr)) <= 1 or
+                getattr(c, 'remote_address', c.raddr)[1] != AMQP_PORT,
                 connections))) != len(connections))
         if found_amqp:
             ok("%s is working." % name)
@@ -172,7 +183,7 @@ class Glance(object):
         (options, args) = self.glance.parser.parse_known_args(self.base_argv)
         if options.help:
             options.command = None
-            self.glance.do_help(options)
+            self.glance.do_help(options, self.glance.parser)
             sys.exit(2)
         api_version = (
             getattr(options, 'os_image_api_version', api_version) or
@@ -229,8 +240,16 @@ class Cinder(object):
             client = client.get_client_class(api_version)(
                 options.os_username,
                 options.os_password,
-                options.os_tenant_name,
-                tenant_id=options.os_tenant_id,
+                tenant_name=getattr(
+                    options, 'os_project_name', getattr(
+                        options, 'os_tenant_name', None
+                    )
+                ),
+                tenant_id=getattr(
+                    options, 'os_project_id', getattr(
+                        options, 'os_tenant_id', None
+                    )
+                ),
                 auth_url=options.os_auth_url,
                 region_name=options.os_region_name,
                 cacert=options.os_cacert,
