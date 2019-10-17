@@ -1,9 +1,9 @@
 psutil
 python-ceilometerclient
-python-cinderclient
-python-glanceclient
-python-keystoneclient
-python-neutronclient
-python-novaclient
-python-openstackclient
+python-cinderclient >=3.2,<3.6
+python-glanceclient >=2.10,<2.11
+python-keystoneclient >=3.15,<3.16
+python-neutronclient >=6.6,<6.8
+python-novaclient >=10.0,<10.2
+python-openstackclient >=3.13,<3.15
 six
