@@ -1,3 +1,6 @@
+cmd2==0.8.9
+openstacksdk==0.45.0
+oslo.config==7.0.0
 psutil
 python-ceilometerclient
 python-cinderclient >=3.6,<4.1
@@ -6,4 +9,6 @@ python-keystoneclient >=3.17,<3.18
 python-neutronclient >=6.7,<6.10
 python-novaclient >=10.2,<11.1
 python-openstackclient >=3.15,<3.17
+setuptools==28.8.0
 six
+stevedore==1.32.0
