@@ -2,6 +2,7 @@ cmd2==0.8.9
 openstacksdk==0.45.0
 oslo.config==7.0.0
 psutil
+pyrsistent==0.16.0
 python-ceilometerclient
 python-cinderclient >=3.6,<4.1
 python-glanceclient >=2.11,<2.14
